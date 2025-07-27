@@ -27,8 +27,9 @@ export class KucoinService {
     this.baseUrl = this.configService.get<string>('KUCOIN_API_BASE_URL') || '';
   }
 
-  async getCandles(symbol: string, interval = '15min', limit = 52) {
-    const formattedSymbol = symbol.toUpperCase().replace('/', '-');
+  async getCandles(symbol: string, interval = '15min', limit = 2000) {
+    // const formattedSymbol = symbol.toUpperCase().replace('/', '-');BTC - USDT;
+    const formattedSymbol = 'BTC-USDT';
 
     // محاسبه زمان پایان و شروع بر اساس تایم‌فریم
     const endAt = Math.floor(Date.now() / 1000); // الان

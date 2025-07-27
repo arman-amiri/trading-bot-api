@@ -1,6 +1,10 @@
 // ichimoku.service.ts
 import { Injectable } from '@nestjs/common';
 import { KucoinService } from '../kucoin/kucoin.service';
+import {
+  calculateZigZagAdvanced,
+  ZigZagPoint,
+} from 'src/indicators/zigzag.indicator';
 
 type Candle = {
   open: number;
@@ -11,6 +15,16 @@ type Candle = {
   timestamp?: number;
   sourceIndex?: number;
 };
+
+export interface CyclePattern {
+  A: Candle;
+  B: Candle;
+  C: Candle;
+  D: Candle;
+  distanceAB: number;
+  distanceBC: number;
+  isValid: boolean;
+}
 
 export interface DetectedPattern {
   type: 'V' | 'N';
@@ -109,5 +123,105 @@ export class IchimokuService {
     }
 
     return patterns;
+  }
+
+  async getZigZagPoints(
+    symbol = 'BTC-USDT',
+    interval = '15min',
+    threshold = 1,
+  ): Promise<ZigZagPoint[]> {
+    const candles = await this.kucoinService.getCandles(symbol, interval);
+    console.log(candles, 'candles');
+    return calculateZigZagAdvanced(candles, threshold);
+  }
+
+  async detectCyclePattern(
+    symbol = 'BTC-USDT',
+    interval = '15min',
+    maxWindow = 100,
+  ): Promise<CyclePattern[]> {
+    // گرفتن کندل‌ها
+    const candles = await this.kucoinService.getCandles(symbol, interval);
+
+    // ساختاردهی به کندل‌ها برای استفاده در الگوریتم
+    const baseCandles: Candle[] = candles.map((c, i) => ({
+      ...c,
+      sourceIndex: i,
+      timestamp: c.timestamp ?? Date.now() + i * 1000,
+    }));
+
+    const results: CyclePattern[] = [];
+
+    // حلقه بررسی کندل‌ها برای یافتن نقطه A
+    for (let i = 0; i < baseCandles.length - 20; i++) {
+      const A = baseCandles[i];
+
+      // ✅ بررسی اینکه A یک لوکال‌ های (سقف محلی) باشد در بازه‌ی 10 کندل قبل و بعد
+      const rangeStartA = Math.max(0, i - 10);
+      const rangeEndA = Math.min(baseCandles.length, i + 10);
+      const localHighs = baseCandles.slice(rangeStartA, rangeEndA);
+      const isLocalHigh = localHighs.every((c) => c.high <= A.high);
+      if (!isLocalHigh) continue;
+
+      // ✅ پیدا کردن B: اولین کندلی که کف آن پایین‌تر از A باشد
+      let B: Candle | null = null;
+      for (let j = i + 1; j < baseCandles.length; j++) {
+        if (baseCandles[j].low < A.low) {
+          B = baseCandles[j];
+          break;
+        }
+      }
+      if (!B) continue;
+
+      const distanceAB = B.sourceIndex! - A.sourceIndex!;
+      if (distanceAB < 4 || distanceAB > maxWindow) continue;
+
+      // ✅ بررسی اینکه B یک لوکال لو باشد در 10 کندل اطراف خودش
+      const rangeStartB = Math.max(0, B.sourceIndex! - 5);
+      const rangeEndB = Math.min(baseCandles.length, B.sourceIndex! + 5);
+      const localLows = baseCandles.slice(rangeStartB, rangeEndB);
+      const isLocalLow = localLows.every((c) => c.low >= B!.low);
+      if (!isLocalLow) continue;
+
+      // ✅ پیدا کردن C: سقف بین B و D، به شرط اینکه high آن < high نقطه A باشد
+      const startC = B.sourceIndex! + 1;
+      const endC = startC + Math.floor(distanceAB / 2);
+      const rangeC = baseCandles.slice(startC, endC);
+      if (rangeC.length === 0) continue;
+
+      const C = rangeC
+        .filter((c) => c.high < A.high)
+        .sort((a, b) => b.high - a.high)[0];
+      if (!C) continue;
+
+      // ✅ پیدا کردن D: کندلی بعد از C که low آن بالاتر از low نقطه B باشد
+      const rangeD = baseCandles.slice(C.sourceIndex! + 1);
+      const D = rangeD
+        .filter((d) => d.low > B.low)
+        .sort((a, b) => a.low - b.low)[0];
+      if (!D) continue;
+
+      // بررسی نظم فاصله‌ها
+      const distanceBD = D.sourceIndex! - B.sourceIndex!;
+      if (distanceBD !== Math.floor(distanceAB / 2)) continue;
+
+      const distanceBC = C.sourceIndex! - B.sourceIndex!;
+
+      // ذخیره‌سازی الگوی معتبر
+      results.push({
+        A,
+        B,
+        C,
+        D,
+        distanceAB,
+        distanceBC,
+        isValid: true,
+      });
+    }
+
+    // بازگرداندن نتایج مرتب‌شده بر اساس زمان نقطه A
+    return results.sort(
+      (a, b) => (a.A.timestamp! ?? 0) - (b.A.timestamp! ?? 0),
+    );
   }
 }

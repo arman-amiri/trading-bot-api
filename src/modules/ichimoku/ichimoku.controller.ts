@@ -11,4 +11,14 @@ export class IchimokuController {
       fractalDepth: parseInt(fractalDepth, 10) || 0,
     });
   }
+
+  @Get('/zikzag')
+  async ZigZag() {
+    return await this.ichimokuService.getZigZagPoints();
+  }
+
+  @Get('/cycle-patterns')
+  async cycle() {
+    return await this.ichimokuService.detectCyclePattern();
+  }
 }

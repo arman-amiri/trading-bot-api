@@ -9,7 +9,7 @@ export class KucoinController {
   async getCandles(
     @Query('symbol') symbol: string = 'BTC-USDT',
     @Query('interval') interval: string = '15min',
-    @Query('limit') limit: string = '52',
+    @Query('limit') limit: string = '2000',
   ) {
     return await this.kucoinService.getCandles(
       symbol,
