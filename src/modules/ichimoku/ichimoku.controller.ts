@@ -5,20 +5,11 @@ import { IchimokuService } from './ichimoku.service';
 export class IchimokuController {
   constructor(private readonly ichimokuService: IchimokuService) {}
 
-  @Get('')
-  async detectPatterns(@Query('fractalDepth') fractalDepth: string = '0') {
-    return await this.ichimokuService.detectIchimokuPatterns({
-      fractalDepth: parseInt(fractalDepth, 10) || 0,
-    });
-  }
-
-  @Get('/zikzag')
-  async ZigZag() {
-    return await this.ichimokuService.getZigZagPoints();
-  }
-
-  @Get('/cycle-patterns')
-  async cycle() {
-    return await this.ichimokuService.detectCyclePattern();
+  @Get('abcde-a-top-2-1')
+  async getPattern78(
+    @Query('symbol') symbol = 'BTC-USDT',
+    @Query('interval') interval = '15min',
+  ) {
+    return this.ichimokuService.detectAbcdeATop2_1(symbol, interval);
   }
 }
