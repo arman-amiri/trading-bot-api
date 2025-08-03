@@ -44,6 +44,7 @@ export class KucoinService {
         '1min': 60,
         '5min': 300,
         '15min': 900,
+        '30min': 1800,
         '1hour': 3600,
         '1day': 86400,
       }[interval] || 60;
@@ -61,8 +62,6 @@ export class KucoinService {
         },
       },
     );
-
-    console.log(res.data, ' res.data');
     // return res.data.data
     //   .map((candle, index) => {
     //     const timestamp = parseInt(candle[0]);
