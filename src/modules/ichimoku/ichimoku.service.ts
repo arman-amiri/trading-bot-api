@@ -78,17 +78,68 @@ export class IchimokuService {
       const tolerance = 2;
       const isValid =
         Math.abs(countBetweenAandB - 2 * countBetweenBandD) <= tolerance;
-      // console.log(countBetweenAandB, 'countBetweenAandB');
-      console.log(
-        A,
-        B,
-        C,
-        D,
-        countBetweenAandB,
-        countBetweenBandD,
-        'countBetweenBandD',
+
+      if (isValid) {
+        console.log(
+          `Pattern found with ${candles.length} candles (A index: ${indexA}, B index: ${indexB}, D index: ${indexD})`,
+        );
+        return { A, B, C, D, countBetweenAandB, countBetweenBandD };
+      }
+      // حذف قدیمی‌ترین کندل (سمت راست)
+      candles.pop();
+    }
+
+    return { message: 'Pattern not found' };
+  }
+
+  async detectOldAbcdeATop2_1(symbol = 'BTC-USDT', interval = '15min') {
+    const candles = await this.kucoinService.getCandles(symbol, interval, 300);
+
+    candles.reverse();
+
+    while (candles.length >= 78) {
+      // نقطه A: بالاترین کندل در بازه فعلی
+      const A = candles.reduce(
+        (max, c) => (c.high > max.high ? c : max),
+        candles[0],
       );
-      // return { A, B, C, D, countBetweenAandB, countBetweenBandD };
+
+      // const A = candles[candles.length - 1];
+
+      // نقطه B: پایین‌ترین کندل در بازه فعلی
+      const B = candles.reduce(
+        (min, c) => (c.low < min.low ? c : min),
+        candles[0],
+      );
+
+      // نقطه D: آخرین کندل
+      const D = candles[0];
+
+      // نقطه C: بالاترین کندل بین B و D
+      const start = Math.min(B.timestamp, D.timestamp);
+      const end = Math.max(B.timestamp, D.timestamp);
+
+      const candlesBetweenBAndD = candles.filter(
+        (c) => c.timestamp >= start && c.timestamp <= end,
+      );
+
+      const C = candlesBetweenBAndD.reduce(
+        (max, c) => (c.high > max.high ? c : max),
+        candlesBetweenBAndD[0],
+      );
+
+      // ایندکس‌ها
+      const indexA = candles.findIndex((c) => c.timestamp === A.timestamp);
+      const indexB = candles.findIndex((c) => c.timestamp === B.timestamp);
+      const indexD = candles.findIndex((c) => c.timestamp === D.timestamp);
+
+      const countBetweenAandB = Math.abs(indexB - indexA) + 1;
+      const countBetweenBandD = Math.abs(indexD - indexB) + 1;
+
+      const tolerance = 2;
+      const isValid =
+        Math.abs(countBetweenAandB - 2 * countBetweenBandD) <= tolerance;
+
       if (isValid) {
         console.log(
           `Pattern found with ${candles.length} candles (A index: ${indexA}, B index: ${indexB}, D index: ${indexD})`,
