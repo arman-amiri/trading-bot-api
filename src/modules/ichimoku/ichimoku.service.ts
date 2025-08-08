@@ -1,6 +1,8 @@
 // ichimoku.service.ts
 import { Injectable } from '@nestjs/common';
 import { KucoinService } from '../kucoin/kucoin.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 type Candle = {
   open: number;
@@ -9,6 +11,7 @@ type Candle = {
   low: number;
   volume?: number;
   timestamp?: number;
+  openTime?: number;
   sourceIndex?: number;
   dateShamsi?: string;
   index: number;
@@ -29,7 +32,10 @@ export interface DetectionOptions {
 
 @Injectable()
 export class IchimokuService {
-  constructor(private kucoinService: KucoinService) {}
+  constructor(
+    private kucoinService: KucoinService,
+    @InjectModel('Candle') private candleModel: Model<Candle>,
+  ) {}
 
   async detectAbcdeATop2_1(symbol = 'BTC-USDT', interval = '15min') {
     const candles = await this.kucoinService.getCandles(symbol, interval, 300);
@@ -92,7 +98,10 @@ export class IchimokuService {
     return { message: 'Pattern not found' };
   }
 
-  async detectOldAbcdeATop2_1(symbol = 'BTC-USDT', interval = '15min') {
+  async detectOldAbcdeATop2_1(
+    symbol = 'BTC-USDT',
+    interval = '15min',
+  ): Promise<any> {
     const candles = await this.kucoinService.getCandles(symbol, interval, 300);
 
     candles.reverse();
@@ -151,5 +160,72 @@ export class IchimokuService {
     }
 
     return { message: 'Pattern not found' };
+  }
+
+  async backtestAbcdeATop2_1(symbol = 'BTC-USDT', interval = '15min') {
+    // گرفتن همه کندل‌ها از دیتابیس
+    const candles = await this.candleModel
+      .find({ symbol, interval })
+      .sort({ openTime: -1 }) // از جدید به قدیم
+      .lean();
+
+    // معکوس کردن برای مرتب‌شدن از قدیم به جدید
+    candles.reverse();
+
+    const detectedPatterns: any = [];
+
+    // الگوریتم اسلایدینگ روی کل دیتاست
+    for (let i = 0; i <= candles.length - 78; i++) {
+      const window = candles.slice(i, i + 78);
+
+      const A = window.reduce(
+        (max, c) => (c.high > max.high ? c : max),
+        window[0],
+      );
+      const B = window.reduce(
+        (min, c) => (c.low < min.low ? c : min),
+        window[0],
+      );
+      const D = window[window.length - 1];
+
+      const start = Math.min(B.openTime!, D.openTime!);
+      const end = Math.max(B.openTime!, D.openTime!);
+
+      const candlesBetweenBAndD = window.filter(
+        (c) => c.openTime! >= start && c.openTime! <= end,
+      );
+
+      if (candlesBetweenBAndD.length === 0) continue;
+
+      const C = candlesBetweenBAndD.reduce(
+        (max, c) => (c.high > max.high ? c : max),
+        candlesBetweenBAndD[0],
+      );
+
+      const indexA = window.findIndex((c) => c.openTime === A.openTime);
+      const indexB = window.findIndex((c) => c.openTime === B.openTime);
+      const indexD = window.findIndex((c) => c.openTime === D.openTime);
+
+      const countAB = Math.abs(indexB - indexA) + 1;
+      const countBD = Math.abs(indexD - indexB) + 1;
+
+      const tolerance = 2;
+      const isValid = Math.abs(countAB - 2 * countBD) <= tolerance;
+
+      if (isValid) {
+        detectedPatterns.push({
+          index: i,
+          A,
+          B,
+          C,
+          D,
+          countAB,
+          countBD,
+        });
+      }
+    }
+
+    console.log(`✅ تعداد الگوهای شناسایی‌شده: ${detectedPatterns.length}`);
+    return detectedPatterns.length;
   }
 }

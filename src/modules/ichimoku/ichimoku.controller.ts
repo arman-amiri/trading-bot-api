@@ -20,4 +20,9 @@ export class IchimokuController {
   ) {
     return this.ichimokuService.detectAbcdeATop2_1(symbol, interval);
   }
+
+  @Get('backtest')
+  async backtestAbcdeATop2_1() {
+    return this.ichimokuService.backtestAbcdeATop2_1();
+  }
 }
