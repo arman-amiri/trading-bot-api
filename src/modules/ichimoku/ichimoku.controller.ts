@@ -25,4 +25,9 @@ export class IchimokuController {
   async backtestAbcdeATop2_1() {
     return this.ichimokuService.backtestAbcdeATop2_1();
   }
+
+  @Get('new-abcd')
+  async newAbcd() {
+    return this.ichimokuService.newAbcd();
+  }
 }

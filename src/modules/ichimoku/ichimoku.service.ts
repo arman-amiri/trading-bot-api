@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { KucoinService } from '../kucoin/kucoin.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { AbcdAtop21Service } from './services/abcd-atop-21.service';
 
 type Candle = {
   open: number;
@@ -32,8 +33,10 @@ export interface DetectionOptions {
 
 @Injectable()
 export class IchimokuService {
+  // AbcdAtop21Service
   constructor(
     private kucoinService: KucoinService,
+    private abcdAtop21Service: AbcdAtop21Service,
     @InjectModel('Candle') private candleModel: Model<Candle>,
   ) {}
 
@@ -227,5 +230,16 @@ export class IchimokuService {
 
     console.log(`✅ تعداد الگوهای شناسایی‌شده: ${detectedPatterns.length}`);
     return detectedPatterns.length;
+  }
+
+  async newAbcd(symbol = 'BTC-USDT', interval = '15min') {
+    // گرفتن همه کندل‌ها از دیتابیس
+    const candles = await this.candleModel
+      .find({ symbol, interval })
+      .sort({ openTime: 1 }) // از جدید به قدیم
+      .lean();
+    console.log(candles.length, 'pp');
+    const result = this.abcdAtop21Service.detectABCD(candles, 300, 78, 2);
+    return result;
   }
 }
