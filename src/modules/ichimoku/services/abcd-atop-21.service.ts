@@ -6,10 +6,10 @@ import IAbcd from '../interfaces/abcd.interface';
 export class AbcdAtop21Service {
   constructor() {}
 
-  findA(candels: ICandel[]): ICandel {
-    const A = candels.reduce(
+  findA(candles: ICandel[]): ICandel {
+    const A = candles.reduce(
       (max, c) => (c.high > max.high ? c : max),
-      candels[0],
+      candles[0],
     );
     return A;
   }
@@ -18,19 +18,37 @@ export class AbcdAtop21Service {
     return Boolean(A.openTime! < B.openTime!);
   }
 
-  findB(candels: ICandel[]): ICandel {
-    const B = candels.reduce(
+  isAHighestBetween10(A: ICandel, allCandles: ICandel[]): boolean {
+    // پیدا کردن ایندکس A در allCandles
+    const indexInAll = allCandles.findIndex((c) => c === A);
+    if (indexInAll === -1) return false; // اگر پیدا نشد
+
+    // محدوده بررسی
+    const start = Math.max(0, indexInAll - 10);
+    const end = Math.min(allCandles.length - 1, indexInAll + 10);
+
+    // بررسی اینکه A از همه بالاتر باشه
+    for (let i = start; i <= end; i++) {
+      if (i !== indexInAll && allCandles[i].high >= A.high) {
+        return false; // شرط برقرار نیست
+      }
+    }
+    return true;
+  }
+
+  findB(candles: ICandel[]): ICandel {
+    const B = candles.reduce(
       (min, c) => (c.low < min.low ? c : min),
-      candels[0],
+      candles[0],
     );
     return B;
   }
 
-  findC(candels: ICandel[], B: ICandel, D: ICandel): ICandel {
+  findC(candles: ICandel[], B: ICandel, D: ICandel): ICandel {
     const start = Math.min(B.openTime!, D.openTime!);
     const end = Math.max(B.openTime!, D.openTime!);
 
-    const candlesBetweenBAndD = candels.filter(
+    const candlesBetweenBAndD = candles.filter(
       (c) => c.openTime! >= start && c.openTime! <= end,
     );
 
@@ -41,41 +59,49 @@ export class AbcdAtop21Service {
     return C;
   }
 
-  findD(candels: ICandel[]): ICandel {
-    const D = candels[0];
+  findD(candles: ICandel[]): ICandel {
+    const D = candles[candles.length - 1];
     return D;
   }
 
-  findCountBetweenAandB(candels: ICandel[], A: ICandel, B: ICandel) {
-    const indexA = candels.findIndex((c) => c.openTime === A.openTime);
-    const indexB = candels.findIndex((c) => c.openTime === B.openTime);
+  findCountBetweenAandB(candles: ICandel[], A: ICandel, B: ICandel) {
+    const indexA = candles.findIndex((c) => c.openTime! === A.openTime!);
+    const indexB = candles.findIndex((c) => c.openTime! === B.openTime!);
     const countBetweenAandB = Math.abs(indexB - indexA) + 1;
     return countBetweenAandB;
   }
 
-  countBetweenBandD(candels: ICandel[], B: ICandel, D: ICandel) {
-    const indexD = candels.findIndex((c) => c.openTime === D.openTime);
-    const indexB = candels.findIndex((c) => c.openTime === B.openTime);
+  countBetweenBandD(candles: ICandel[], B: ICandel, D: ICandel) {
+    const indexD = candles.findIndex((c) => c.openTime! === D.openTime!);
+    const indexB = candles.findIndex((c) => c.openTime! === B.openTime!);
 
     const countBetweenBandD = Math.abs(indexD - indexB) + 1;
     return countBetweenBandD;
   }
 
-  private findABCD(candels: ICandel[], minBoxSize: number, tolerance: number) {
+  private findABCD(candles: ICandel[], minBoxSize: number, tolerance: number) {
     let result: IAbcd | undefined;
-    // while (candels.length >= minBoxSize) {
-    for (let i = candels.length; i >= candels.length; i--) {
-      const D = this.findD(candels);
-      const B = this.findB(candels);
-      const C = this.findC(candels, B, D);
-      const A = this.findA(candels);
+    const _candles = candles.slice(10);
+
+    while (_candles.length > minBoxSize) {
+      // console.log(
+      //   _candles.length,
+      //   _candles[_candles.length - 1].openDateJalali,
+      // );
+      const D = this.findD(_candles);
+      const B = this.findB(_candles);
+      const C = this.findC(_candles, B, D);
+      const A = this.findA(_candles);
+
+      const isAHighest = this.isAHighestBetween10(A, candles);
+      if (!isAHighest) return undefined;
+
       // A باید قدیمی ترین باشه
       const oldestA = this.isAOldest(A, B);
       if (!oldestA) return undefined;
 
-      const countBetweenAandB = this.findCountBetweenAandB(candels, A, B);
-      const countBetweenBandD = this.countBetweenBandD(candels, B, D);
-      console.log(countBetweenAandB, countBetweenBandD);
+      const countBetweenAandB = this.findCountBetweenAandB(_candles, A, B);
+      const countBetweenBandD = this.countBetweenBandD(_candles, B, D);
       const isValid =
         Math.abs(countBetweenAandB - 2 * countBetweenBandD) <= tolerance;
 
@@ -88,8 +114,9 @@ export class AbcdAtop21Service {
           countBetweenAandB,
           countBetweenBandD,
         };
+        break;
       }
-      //   candels.pop();
+      _candles.pop();
     }
     if (result) return result;
     return undefined;
@@ -102,19 +129,55 @@ export class AbcdAtop21Service {
     tolerance: number,
   ) {
     const finalResult: IAbcd[] = [];
-    const _maxBoxSize = maxBoxSize + 10;
-    for (let i = candles.length; i >= candles.length; i--) {
-      const candelsBox = candles.slice(-_maxBoxSize);
+    const _maxBoxSize = maxBoxSize + 9;
+    // console.log(
+    //   '0=> 1402-12-04 11:45:00',
+    //   candles[0],
+    //   'last=> 1404-05-16 17:30:00',
+    //   candles[candles.length - 1],
+    // );
 
-      if (candelsBox.length == _maxBoxSize) {
-        const result = this.findABCD(candelsBox, minBoxSize, tolerance);
+    candles.map((candel, i) => {
+      console.log(i, i - _maxBoxSize, 'cc');
+      // const candlesBox = candles.slice(
+      //   i - _maxBoxSize >= 0 ? i - _maxBoxSize : 0,
+      //   i + 1,
+      // );
+
+      // i = 0 یعنی از انتهای آرایه شروع
+      const start = -(i + _maxBoxSize + 1);
+      const end = -i || candles.length; // چون -0 در JS همون 0 هست و slice(?, 0) خالی میشه
+
+      const candlesBox = candles.slice(start, end);
+      console.log(candlesBox[candlesBox.length - 1].openDateJalali, 'rr');
+      console.log(
+        candlesBox[candlesBox.length - 1]?.openDateJalali,
+        candles[i].openDateJalali,
+        'le',
+      );
+
+      if (candlesBox.length == _maxBoxSize + 1) {
+        const result = this.findABCD(candlesBox, minBoxSize, tolerance);
         if (result) finalResult.push(result);
       }
-      candles.pop();
+    });
+
+    const uniqueResults: IAbcd[] = [];
+    const seen = new Set();
+
+    for (const item of finalResult) {
+      const key = `${item.A._id}-${item.B._id}-${item.C._id}-${item.D._id}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueResults.push(item);
+      }
     }
+
     return {
-      finalResult,
       founded: finalResult.length,
+      uniqueResultsfounded: uniqueResults.length,
+      uniqueResults,
     };
   }
 }

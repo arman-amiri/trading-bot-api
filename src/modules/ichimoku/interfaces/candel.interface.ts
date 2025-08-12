@@ -1,4 +1,5 @@
 export default interface ICandel {
+  _id: object;
   open: number;
   close: number;
   high: number;
@@ -6,5 +7,6 @@ export default interface ICandel {
   volume?: number;
   openTime?: number;
   dateShamsi?: string;
+  openDateJalali?: string;
   trend?: 'bullish' | 'bearish' | 'neutral';
 }

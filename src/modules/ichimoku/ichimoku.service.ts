@@ -237,9 +237,33 @@ export class IchimokuService {
     const candles = await this.candleModel
       .find({ symbol, interval })
       .sort({ openTime: 1 }) // از جدید به قدیم
+      // .limit(10)
       .lean();
-    console.log(candles.length, 'pp');
-    const result = this.abcdAtop21Service.detectABCD(candles, 300, 78, 2);
+    const result = this.abcdAtop21Service.detectABCD(candles, 300, 78, 1);
     return result;
   }
 }
+
+// [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+// "finalResult": [
+//     [
+//         6,
+//         7,
+//         8,
+//         9,
+//         10
+//     ],
+//     [
+//         5,
+//         6,
+//         7,
+//         8,
+//         9
+//     ],
+//     [
+//         4,
+//         5,
+//         6,
+//         7,
+//         8
+//     ],]
