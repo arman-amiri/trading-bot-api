@@ -14,4 +14,9 @@ export class HistoryController {
   fetchLarge() {
     return this.historyService.fetchLargeHistory('BTC-USDT', '15min', 50000);
   }
+
+  @Get('2-years')
+  get2Years() {
+    return this.historyService.get2Years();
+  }
 }

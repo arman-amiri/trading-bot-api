@@ -129,4 +129,13 @@ export class HistoryService {
     // پیام موفقیت
     return `${result.length} candles saved.`;
   }
+
+  async get2Years() {
+    const candles = await this.candleModel
+      .find({ symbol: 'BTC-USDT', interval: '15min' })
+      .sort({ openTime: 1 }) // از جدید به قدیم
+      .lean();
+
+    return candles;
+  }
 }

@@ -84,10 +84,6 @@ export class AbcdAtop21Service {
     const _candles = candles.slice(10);
 
     while (_candles.length > minBoxSize) {
-      // console.log(
-      //   _candles.length,
-      //   _candles[_candles.length - 1].openDateJalali,
-      // );
       const D = this.findD(_candles);
       const B = this.findB(_candles);
       const C = this.findC(_candles, B, D);
@@ -130,31 +126,13 @@ export class AbcdAtop21Service {
   ) {
     const finalResult: IAbcd[] = [];
     const _maxBoxSize = maxBoxSize + 9;
-    // console.log(
-    //   '0=> 1402-12-04 11:45:00',
-    //   candles[0],
-    //   'last=> 1404-05-16 17:30:00',
-    //   candles[candles.length - 1],
-    // );
 
     candles.map((candel, i) => {
-      console.log(i, i - _maxBoxSize, 'cc');
-      // const candlesBox = candles.slice(
-      //   i - _maxBoxSize >= 0 ? i - _maxBoxSize : 0,
-      //   i + 1,
-      // );
-
       // i = 0 یعنی از انتهای آرایه شروع
       const start = -(i + _maxBoxSize + 1);
       const end = -i || candles.length; // چون -0 در JS همون 0 هست و slice(?, 0) خالی میشه
 
       const candlesBox = candles.slice(start, end);
-      console.log(candlesBox[candlesBox.length - 1].openDateJalali, 'rr');
-      console.log(
-        candlesBox[candlesBox.length - 1]?.openDateJalali,
-        candles[i].openDateJalali,
-        'le',
-      );
 
       if (candlesBox.length == _maxBoxSize + 1) {
         const result = this.findABCD(candlesBox, minBoxSize, tolerance);
