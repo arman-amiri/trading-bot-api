@@ -64,6 +64,34 @@ export class AbcdAtop21Service {
     return D;
   }
 
+  isDLowestThan1_3(D: ICandel, B: ICandel, candles: ICandel[]): boolean {
+    const start = Math.min(B.openTime!, D.openTime!);
+    const end = Math.max(B.openTime!, D.openTime!);
+
+    // انتخاب کندل‌های بین B و D
+    const candlesBetweenBAndD = candles.filter(
+      (c) => c.openTime! >= start && c.openTime! <= end,
+    );
+
+    if (candlesBetweenBAndD.length < 3) return false; // اگر کمتر از 3 کندل داشتیم تقسیم بی‌معنی میشه
+
+    // تقسیم به سه بخش
+    const partSize = Math.floor(candlesBetweenBAndD.length / 3);
+    const thirdPart = candlesBetweenBAndD.slice(-partSize); // یک‌سوم پایانی
+
+    // پیدا کردن کمترین کندل در یک‌سوم پایانی
+    // const lowestInThird = thirdPart.reduce(
+    //   (min, c) => (c.low < min.low ? c : min),
+    //   thirdPart[0],
+    // );
+
+    // بررسی اینکه D پایین‌تر از همه در بخش سوم باشه
+    // بررسی اینکه D از همه کندل‌های بخش سوم پایین‌تر باشه
+    return thirdPart.every((c) => {
+      return D.low <= c.low;
+    });
+  }
+
   findCountBetweenAandB(candles: ICandel[], A: ICandel, B: ICandel) {
     const indexA = candles.findIndex((c) => c.openTime! === A.openTime!);
     const indexB = candles.findIndex((c) => c.openTime! === B.openTime!);
@@ -101,7 +129,9 @@ export class AbcdAtop21Service {
       const isValid =
         Math.abs(countBetweenAandB - 2 * countBetweenBandD) <= tolerance;
 
-      if (isValid) {
+      const isDLowestThan = this.isDLowestThan1_3(D, B, _candles);
+
+      if (isValid && isDLowestThan) {
         result = {
           A,
           B,
