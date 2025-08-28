@@ -9,4 +9,9 @@ export class IchimokuController {
   async newAbcd() {
     return this.ichimokuService.newAbcd();
   }
+
+  @Get('find-e')
+  async findE() {
+    return this.ichimokuService.newAbcd();
+  }
 }

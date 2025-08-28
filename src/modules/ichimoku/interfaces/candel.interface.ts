@@ -9,4 +9,6 @@ export default interface ICandel {
   dateShamsi?: string;
   openDateJalali?: string;
   trend?: 'bullish' | 'bearish' | 'neutral';
+  symbol?: string;
+  interval?: string;
 }

@@ -188,4 +188,8 @@ export class AbcdAtop21Service {
       uniqueResults,
     };
   }
+
+  findE(candles: ICandel[], abcd: IAbcd[]) {
+    console.log(candles.length, abcd.length, '9999999999');
+  }
 }
